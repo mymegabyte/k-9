@@ -2369,7 +2369,7 @@ public class ImapStore extends Store {
         private long lastCmdSendtime;
         
         public boolean isExpired() {
-        	return ((System.currentTimeMillis() - lastCmdSendtime) > 300);
+        	return ((System.currentTimeMillis() - lastCmdSendtime) > 30000);
         }
 
         public ImapConnection(final ImapSettings settings) {

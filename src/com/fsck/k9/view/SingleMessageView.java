@@ -1,6 +1,7 @@
 package com.fsck.k9.view;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -86,6 +87,7 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
 
     private boolean mScreenReaderEnabled;
     private MessageCryptoView mCryptoView;
+    private MessageOpenPgpView mOpenPgpView;
     private MessageWebView mMessageContentView;
     private AccessibleWebView mAccessibleMessageContentView;
     private MessageHeader mHeaderContainer;
@@ -127,6 +129,9 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
         mCryptoView = (MessageCryptoView) findViewById(R.id.layout_decrypt);
         mCryptoView.setFragment(fragment);
         mCryptoView.setupChildViews();
+        mOpenPgpView = (MessageOpenPgpView) findViewById(R.id.layout_decrypt_openpgp);
+        mOpenPgpView.setFragment(fragment);
+        mOpenPgpView.setupChildViews();
         mShowPicturesAction = findViewById(R.id.show_pictures);
         mShowMessageAction = findViewById(R.id.show_message);
 
@@ -191,14 +196,14 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
                         switch (item.getItemId()) {
                             case MENU_ITEM_LINK_VIEW: {
                                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                                getContext().startActivity(intent);
+                                startActivityIfAvailable(getContext(), intent);
                                 break;
                             }
                             case MENU_ITEM_LINK_SHARE: {
                                 Intent intent = new Intent(Intent.ACTION_SEND);
                                 intent.setType("text/plain");
                                 intent.putExtra(Intent.EXTRA_TEXT, url);
-                                getContext().startActivity(intent);
+                                startActivityIfAvailable(getContext(), intent);
                                 break;
                             }
                             case MENU_ITEM_LINK_COPY: {
@@ -243,7 +248,7 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
                                     // AttachmentProvider
                                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                                 }
-                                getContext().startActivity(intent);
+                                startActivityIfAvailable(getContext(), intent);
                                 break;
                             }
                             case MENU_ITEM_IMAGE_SAVE: {
@@ -291,7 +296,7 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
                             case MENU_ITEM_PHONE_CALL: {
                                 Uri uri = Uri.parse(WebView.SCHEME_TEL + phoneNumber);
                                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                                getContext().startActivity(intent);
+                                startActivityIfAvailable(getContext(), intent);
                                 break;
                             }
                             case MENU_ITEM_PHONE_SAVE: {
@@ -336,7 +341,7 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
                             case MENU_ITEM_EMAIL_SEND: {
                                 Uri uri = Uri.parse(WebView.SCHEME_MAILTO + email);
                                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                                getContext().startActivity(intent);
+                                startActivityIfAvailable(getContext(), intent);
                                 break;
                             }
                             case MENU_ITEM_EMAIL_SAVE: {
@@ -372,6 +377,14 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
 
                 break;
             }
+        }
+    }
+
+    private void startActivityIfAvailable(Context context, Intent intent) {
+        try {
+            context.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(context, R.string.error_activity_not_found, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -536,7 +549,7 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
     public boolean additionalHeadersVisible() {
         return mHeaderContainer.additionalHeadersVisible();
     }
-
+    
     public void setMessage(Account account, LocalMessage message, PgpData pgpData,
             MessagingController controller, MessagingListener listener) throws MessagingException {
         resetView();
@@ -607,6 +620,8 @@ public class SingleMessageView extends LinearLayout implements OnClickListener,
         if (text != null) {
             loadBodyFromText(text);
             updateCryptoLayout(account.getCryptoProvider(), pgpData, message);
+            mOpenPgpView.updateLayout(account, pgpData.getDecryptedData(),
+                    pgpData.getSignatureResult(), message);
         } else {
             showStatusMessage(getContext().getString(R.string.webview_empty_message));
         }

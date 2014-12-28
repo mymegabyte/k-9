@@ -716,7 +716,11 @@ public class ImapStore extends Store {
         synchronized (mConnections) {
             ImapConnection connection = null;
             while ((connection = mConnections.poll()) != null) {
-                try {
+                if (connection.isExpired()) {
+                	connection.close();
+                	continue;
+                }
+            	try {
                     connection.executeSimpleCommand("NOOP");
                     break;
                 } catch (IOException ioe) {
@@ -2354,6 +2358,12 @@ public class ImapStore extends Store {
         protected Set<String> capabilities = new HashSet<String>();
 
         private ImapSettings mSettings;
+        
+        private long lastCmdSendtime;
+        
+        public boolean isExpired() {
+        	return ((System.currentTimeMillis() - lastCmdSendtime) > 30000);
+        }
 
         public ImapConnection(final ImapSettings settings) {
             this.mSettings = settings;
@@ -2860,7 +2870,7 @@ public class ImapStore extends Store {
             mOut.write('\r');
             mOut.write('\n');
             mOut.flush();
-
+            lastCmdSendtime = System.currentTimeMillis();
             if (K9.DEBUG && K9.DEBUG_PROTOCOL_IMAP)
                 Log.v(K9.LOG_TAG, getLogId() + ">>> " + continuation);
 
@@ -2883,7 +2893,7 @@ public class ImapStore extends Store {
                         Log.v(K9.LOG_TAG, getLogId() + ">>> " + commandToSend);
                     }
                 }
-
+                lastCmdSendtime = System.currentTimeMillis();
                 return tag;
             } catch (IOException ioe) {
                 close();

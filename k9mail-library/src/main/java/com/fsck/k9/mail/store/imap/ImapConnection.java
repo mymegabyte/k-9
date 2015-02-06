@@ -73,6 +73,11 @@ class ImapConnection {
     private ImapSettings mSettings;
     private ConnectivityManager mConnectivityManager;
     private final TrustedSocketFactory mSocketFactory;
+    private long lastCmdSendtime = 0;
+
+    public boolean isExpired() {
+	return ((System.currentTimeMillis() - lastCmdSendtime) > 30000);
+    }
 
     public ImapConnection(ImapSettings settings,
                           TrustedSocketFactory socketFactory,
@@ -244,6 +249,7 @@ class ImapConnection {
         mOut.write('\n');
         mOut.flush();
 
+	lastCmdSendtime = System.currentTimeMillis();
         if (K9MailLib.isDebug() && DEBUG_PROTOCOL_IMAP)
             Log.v(LOG_TAG, getLogId() + ">>> " + continuation);
 
@@ -256,6 +262,8 @@ class ImapConnection {
             String commandToSend = tag + " " + command + "\r\n";
             mOut.write(commandToSend.getBytes());
             mOut.flush();
+
+            lastCmdSendtime = System.currentTimeMillis();
 
             if (K9MailLib.isDebug() && DEBUG_PROTOCOL_IMAP) {
                 if (sensitive && !K9MailLib.isDebugSensitive()) {
@@ -340,6 +348,8 @@ class ImapConnection {
         mOut.write('\r');
         mOut.write('\n');
         mOut.flush();
+
+	lastCmdSendtime = System.currentTimeMillis();
         try {
             receiveCapabilities(mParser.readStatusResponse(tag, command, getLogId(), null));
         } catch (MessagingException e) {
@@ -356,6 +366,8 @@ class ImapConnection {
         mOut.write('\r');
         mOut.write('\n');
         mOut.flush();
+	
+	lastCmdSendtime = System.currentTimeMillis();
         try {
             receiveCapabilities(mParser.readStatusResponse(tag, command, getLogId(), null));
         } catch (MessagingException e) {

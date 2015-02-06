@@ -588,6 +588,10 @@ public class ImapStore extends RemoteStore {
         synchronized (mConnections) {
             ImapConnection connection;
             while ((connection = mConnections.poll()) != null) {
+		if (connection.isExpired()) {
+			connection.close();
+			continue;
+		}
                 try {
                     connection.executeSimpleCommand("NOOP");
                     break;
